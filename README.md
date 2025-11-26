@@ -7,7 +7,7 @@
 
 ## Requirements
 
-Python version 3.12+.
+Python version 3.10+.
 See [requirements.txt](./requirements.txt) for full list of packages.
 
 ## Installation instructions
@@ -21,8 +21,6 @@ conda create --name safari_env python=3.12
 conda activate safari_env
 pip install -e .
 ```
-## Structure
-
 ## Current limitations
 
 The current version is implemented in numpy and runs on CPU only.  Updates for GPU coming soon.
@@ -41,11 +39,11 @@ If you use this code, please cite the following paper:
 
 ```
 @article{
-babaei2025safari,
-title={Sa{FAR}i: State-Space Models for Frame-Agnostic Representation},
-author={Hossein Babaei and Mel White and Sina Alemohammad and Richard Baraniuk},
-journal={Transactions on Machine Learning Research},
-issn={2835-8856},
-year={2025},
+  babaei2025safari,
+  title={Sa{FAR}i: State-Space Models for Frame-Agnostic Representation},
+  author={Hossein Babaei and Mel White and Sina Alemohammad and Richard Baraniuk},
+  journal={Transactions on Machine Learning Research},
+  issn={2835-8856},
+  year={2025},
 }
 ```
