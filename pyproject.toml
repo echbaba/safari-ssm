@@ -1,0 +1,31 @@
+[build-system]
+    requires = ["setuptools >= 61.0"]
+    build-backend = "setuptools.build_meta"
+[tool.setuptools]
+    packages = ["safari"]
+    package-dir = { "" = "src" }
+[project]
+    name = "safari"
+    version = "0.0.1"
+    dynamic = ["dependencies"]
+    requires-python = ">=3.10"
+[tool.setuptools.dynamic]
+    dependencies = {file = ["requirements.txt"]}
+[tool.pytest.ini_options]
+    testpaths =["test",]
+[tool.pylint]
+    # Run `pylint --generate-toml-config` to see all possible options.
+    # These should all be fixed.
+    disable = ["too-many-arguments", "too-many-instance-attributes", "too-many-locals", "protected-access"]
+    # use #FIXME or #XXX to triger a linting error. 
+    notes = ["FIXME", "XXX"]
+    # We want files with classes to be PascalCase and module files to be snake_case?
+    module-naming-style = "any"
+    # If `pytest pyao` is called then all files are linted. 
+    recursive = "y"
+    # Names to allow even though they violate convention.
+    good-names = ["i", "j", "k", "_", "L0", "G", "g", "N", "U_ref", "U_sig"]
+    # Maximum number of characters on a single line. Matching PEP8
+    max-line-length = 79
+
+    #ignore= ["controls"]
