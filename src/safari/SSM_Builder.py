@@ -1,9 +1,12 @@
 import numpy as np
 import findiff as fd
+import importlib
 from . import Frame_Builder as fb
+importlib.reload(fb)
 import os
 import pickle
 import tabulate
+import matplotlib.pyplot as plt
 
 def ssm_options():
     # option, keyword, default value, description
@@ -35,6 +38,7 @@ def eigen_value_decomp(A):
         is_diag=False
         eigenvectors=None
         eigenvalues=None
+    print("There are ", len(eigenvalues), "eigenvalues and the diagonalization is", is_diag, "\n")
     return eigenvalues, eigenvectors, is_diag
 
 def get_effective_rank(A,tol=1e-12):
@@ -56,30 +60,31 @@ class SSM:
     """
     def __init__(self, **params):
 
+        FOBJ_KEYS = {"fname", "F", "dF", "D", "N", "L", "dborder", "num_freqs", "redundancy", 
+                     "range_min", "range_max", "fmin", "fmax", "rcond", "sigma_factor",
+                     "freqs", "base_freq", "num_freq_levels", "freq_scale", "multiscale", "m"}
         self.fname = params.get("fname", 'custom') 
         self.meas = params.get("meas", 'scaled')
         save_path = params.get("sav_path", None)
-        self.F = params.get("F", None)
+        self.F = params.get("F", None)  
+        self.dF = params.get("dF", None)
+        self.D = params.get("D", None) 
+        self.N = params.get("N", 32)
 
+        fobj_params = {k: v for k, v in params.items() if k in FOBJ_KEYS}    
+        
         # Establish frame to use
         if self.F is not None: # if the user has provided a frame, use it.
             print("Using provided frame.")
-            self.dF = params.get("dF", None)
-            self.D = params.get("D", None)
-            self.Fobj = fb.Fobj(fname=self.fname, F=self.F, dF=self.dF, D=self.D)
-            self.N = self.Fobj.F.shape[0]
-            self.L = self.Fobj.F.shape[1]
+            self.Fobj = fb.Fobj(**fobj_params)
+
         else:  # else, build the frame using provided parameters
-            self.N= params.get("N",50) 
-            self.L= params.get("L",10000)
-            # check if the name given for the frame is valid
-            if self.fname in ['legendre', 'fourier', 'chebyshev', 'laguerre', 'bernstein', 'gabor']:
-                self.Fobj = fb.Fobj(fname=self.fname, N=self.N, L=self.L)
-        self.completeFrame() # compute dual and derivative if not already provided 
+            if self.fname in ['legendre', 'fourier', 'chebyshev', 'laguerre', 'bernstein', 'gabor', 'daubechies']:
+                self.Fobj = fb.Fobj(**fobj_params)
         
         # check whether there is a known closed-form solution for A, B
-        if ((self.fname=='legendre' and self.meas=='scaled') or (self.fname=='legendre' and self.meas=='translated') 
-            or (self.fname=='fourier' and self.meas=='translated')):
+        if ((self.fname=='legendre' and self.meas=='scaled') or (self.fname=='legendre' and self.meas=='translated')): 
+            #or (self.fname=='fourier' and self.meas=='translated')):
             self.hippo()
         else: # if not, default to numerical method
             self.safari()
@@ -112,17 +117,6 @@ class SSM:
             raise ValueError(f"The file at '{path}' is not a valid SSM pickle.")
         except Exception as e:
             raise RuntimeError(f"An unexpected error occurred while loading: {e}")      
-            
-
-    def completeFrame(self):
-        # if a dual of the frame has been provided, use it.  Else, compute it.
-        if self.Fobj.D is None:
-            #print("Computing dual frame")
-            self.Fobj.D = np.linalg.pinv(self.Fobj.F).T
-        # if the derivative of the frame has been provided, use it.  Else, compute it.
-        if self.Fobj.dF is None:
-            #print("Computing derivative of frame")
-            self.Fobj.dF = self.fdFrame(self.Fobj.F)
 
     def hippo(self):
 
@@ -151,8 +145,13 @@ class SSM:
                         A[n,k] = np.sqrt(2*n+1)*np.sqrt(2*k+1) 
 
         elif self.fname=='fourier' and self.meas=='translated':
+            #self.N = self.N + 1 # add one for the DC term
+            A = np.zeros((self.N,self.N))
+            B = np.zeros((self.N,1))
             print('Generating HiPPO-FouT')
             for n in range(self.N):
+                if n % 2 == 1:
+                    B[n] = -np.sqrt(2)
                 for k in range(self.N):
                     if n == 0 and k == 0:
                         A[n,k] = 1
@@ -168,6 +167,8 @@ class SSM:
                             A[n,k] = np.sqrt(2)
                         elif n-k == 1: # k odd, n-k = 1
                             A[n,k] = np.pi*(k+1)
+            B[0] = -2
+
         self.A = A
         self.B = B
     
@@ -190,32 +191,32 @@ class SSM:
     
         self.A = A
         self.B = B[:,None]
-            
-    def fdFrame(self, F):
-    # input:    F, the frame
-    # output:   dF, first derivative of the frame calculated by finite difference method
-        dx = 1/self.L
-        dF_dx = fd.FinDiff(1,dx)
-        dF = dF_dx(F)
-        return dF
     
     def diagonalize(self):
-        eigenvalues, eigenvectors,is_diag=eigen_value_decomp(self.A)
+        eigenvalues, eigenvectors, is_diag=eigen_value_decomp(self.A)
         self.erank = get_effective_rank(self.A)
+        self.cond = np.linalg.cond(eigenvectors)
         if is_diag:
             B_diag= np.linalg.inv(eigenvectors) @ self.B
             if self.meas=='scaled':
                 eff_rank= 1+len(np.argwhere(np.abs(eigenvalues)>1.000001 )) 
             elif self.meas=='translated':
-                 eff_rank= 1+len(np.argwhere(np.abs(eigenvalues)>0.0000001 ))           
+                 eff_rank= 1+len(np.argwhere(np.abs(eigenvalues)>0.0000001 ))     
             print("The", self.meas, self.fname, "SSM is diagonalizable with effective rank:", eff_rank, "\n")
             Translation= self.Fobj.F  @ self.Fobj.D.T
             eigenvalues= eigenvalues[0: eff_rank]
             eigenvectors=Translation @ eigenvectors[ :, 0:eff_rank ]
-            B_diag= B_diag[0:eff_rank]            
+            B_diag= B_diag[0:eff_rank]       
             return eigenvalues.squeeze(), eigenvectors, B_diag.squeeze(), is_diag
         else:
             print("The", self.meas, self.fname,"SSM is non-diagonalizable with effective rank:", self.A.shape[0], "\n")
             return None, None, None, is_diag
 
+    def plot_frame(self, which: str = "F", **kwargs):
+        """
+        Delegates basis plotting to the underlying Fobj instance.
+        """
+        if self.Fobj is None:
+            raise AttributeError("SSM has no initialized Fobj.")
+        self.Fobj.plot(which=which, **kwargs)
 
