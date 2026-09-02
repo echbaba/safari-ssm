@@ -15,7 +15,7 @@ def framelist():
         ["Chebyshev Polynomials", "chebyshev", "N/A", "N/A", "N/A"],
         ["Laguerre Polynomials", "laguerre", "N/A", "N/A", "N > 100 may be unstable"],
         ["Bernstein Polynomials", "bernstein", "N/A", "N/A", "N/A"],
-        ["Gabor Filters [LEGACY]", "[N/A]", "fmin, fmax \nredundancy", "fmin=-2.0, fmax=1.0 \nredundancy=1.0", "Fmin, Fmax = 2**fmin (0.25), 2**fmax (2.0). \n[Deprecated Sept 2026.]"],
+        ["Gabor Filters [LEGACY]", "[N/A]", "fmin, fmax \nredundancy", "fmin=-2.0, fmax=1.0 \nredundancy=0.0", "Fmin, Fmax = 2**fmin (0.25), 2**fmax (2.0). \n[Deprecated Sept 2026.]"],
         ["Gabor Filters", "gabor", "freqs, redundancy, \nsigma_factor, base_freq, \nnum_freq_levels, freq_scale, \nmultiscale", 
          "freqs=None, redundancy=0.0, \nsigma_factor=0.4, base_freq=8, \nnum_freq_levels=4, freq_scale='dyadic', \nmultiscale=False", 
          "Automatic allocation: set base_freq, num_freq_levels.\nExplicit frequencies: pass list eg [4,8,16] to freqs. \nSigma factor is for Gaussian envelope.\n"
@@ -290,52 +290,10 @@ class Fobj:
                     break
 
 
-            D = np.linalg.pinv(F, rcond=self.rcond).T  # Dual frame via pseudoinverse
-            # wavelet = pywt.Wavelet(self.dborder)
-            # print(f"Generating Daubechies frame with wavelet '{self.dborder}' for N={self.N}, L={self.L}.")
-            # max_level = pywt.dwt_max_level(data_len=self.N, filter_len=wavelet.dec_len)
-            # if max_level == 0:
-            #     raise ValueError(
-            #         f"N={self.N} is too small for wavelet '{self.dborder}' with filter length {wavelet.dec_len}."
-            #     )
-            
-            # # Generate canonical basis impulses in coefficient space and reconstruct
-            # dummy_signal = np.zeros(self.N)
-            # coeffs_structure = pywt.wavedec(dummy_signal, wavelet=wavelet, level=max_level, mode='periodization')
-            # row_idx = 0
-            # # Generate Daubechies wavelet frame using pywt
-            # for band_idx, band in enumerate(coeffs_structure):
-            #     band_len = len(band)
-            #     for coeff_pos in range(band_len):
-            #         if row_idx >= self.N:
-            #             break
-            #         # Create a zeroed copy of coefficient structure
-            #         impulse_coeffs = [np.zeros_like(c) for c in coeffs_structure]
-            #         impulse_coeffs[band_idx][coeff_pos] = 1.0
-                    
-            #         # Synthesize standard length-N basis function via IDWT
-            #         basis_elem = pywt.waverec(impulse_coeffs, wavelet=wavelet, mode='periodization')
-                    
-            #         # Resample or pad/truncate to target length L
-            #         if len(basis_elem) != self.L:
-            #             # Interpolate to match required discretized length L
-            #             x_old = np.linspace(0, 1, len(basis_elem), endpoint=False)
-            #             x_new = np.linspace(0, 1, self.L, endpoint=False)
-            #             basis_elem_resampled = np.interp(x_new, x_old, basis_elem)
-            #             # Normalize energy after interpolation
-            #             norm = np.linalg.norm(basis_elem_resampled)
-            #             if norm > 0:
-            #                 basis_elem_resampled /= norm
-            #             F[row_idx, :] = basis_elem_resampled
-            #         else:
-            #             F[row_idx, :] = basis_elem[:self.L]
-            #         row_idx += 1
-            
+            D = np.linalg.pinv(F, rcond=self.rcond).T  # Dual frame via pseudoinverse           
 
         else:
             raise ValueError("Unknown frame type for built-in frame generator.")
-
-        
     
         self.F = F
         try:

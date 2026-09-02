@@ -17,7 +17,7 @@ def ssm_options():
         ["Frame", "F", "N x L numpy array", "None"],
         ["Derivative of Frame", "dF", "N x L numpy array", "None"],
         ["Dual of Frame", "D", "N x L numpy array", "None"],
-        ["Number of coefficients", "N", "positive integer", "50"],
+        ["Number of coefficients", "N", "positive integer", "32"],
         ["Length of frame", "L", "positive integer", "2**14"],
         ["Save path", "sav_path", "string (file path)", "None"]
     ]
